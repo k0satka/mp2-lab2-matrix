@@ -387,4 +387,20 @@ public:
     }
 };
 
+//CRS матрица
+template <typename T>
+class TCRSMatrix {
+private:
+    size_t rows;
+    size_t cols;
+    TDynamicArray<T> data;
+    TDynamicArray<size_t> row;
+    TDynamicArray<size_t> col;
+
+public:
+    TCRSMatrix(size_t _rows = 1, size_t _cols = 1) : rows(_rows), cols(_cols) {
+        //дописать
+    }
+};
+
 #endif
