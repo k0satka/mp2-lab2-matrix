@@ -383,7 +383,7 @@ public:
     void erase(size_t pos) {
         for (size_t i = pos + 1; i < sz; i++)
             pMem[i - 1] = pMem[i];
-        resize(n - 1);
+        resize(sz - 1);
     }
 };
 
@@ -394,13 +394,70 @@ private:
     size_t rows;
     size_t cols;
     TDynamicArray<T> data;
-    TDynamicArray<size_t> row;
     TDynamicArray<size_t> col;
+    TDynamicArray<size_t> row;
 
 public:
-    TCRSMatrix(size_t _rows = 1, size_t _cols = 1) : rows(_rows), cols(_cols) {
-        //дописать
+    TCRSMatrix(size_t _rows = 1, size_t _cols = 1) : rows(_rows), cols(_cols), row(rows + 1) { }
+
+    size_t get_rows() const { return rows; }
+
+    size_t get_cols() const { return cols; }
+
+    size_t get_DataSize() const { return data.size(); }
+
+    T get(size_t _row, size_t _col) const {
+        if (_row >= rows || _col >= cols) throw std::out_of_range("index out of range");
+
+        for (size_t i = row[_row]; i < row[_row + 1]; i++) if (col[i] == _col) return data[i];
+        return T();
     }
+
+    void set(size_t _row, size_t _col, T val) {
+        if (_row >= rows || _col >= cols) throw std::out_of_range("index out of range");
+
+        for (size_t i = row[_row]; i < row[_row + 1]; i++) {
+            if (col[i] == _col) {
+                if (val == T()) {
+                    data.erase(i);
+                    col.erase(i);
+                    for (size_t k = _row + 1; k <= rows; k++) row[k] -= 1;
+                }
+                else data[i] = val;
+                return;
+            }
+        }
+        //если место не было занято:
+        if (val == T()) return;
+        for (size_t i = _row + 1; i <= rows; i++) row[i] += 1;
+        col.insert(row[_row], _col);
+        data.insert(row[_row], val);
+    }
+
+    //матрица на скаляр
+    TCRSMatrix<T> operator*(const T& val) const {
+        TCRSMatrix<T> res = *this;
+        if (val == T()) {
+            res.col.clear();
+            for (size_t i = 0; i <= res.rows; i++) res.row[i] = 0;
+            res.data.clear();
+        }
+        else for (size_t i = 0; i < res.data.size(); i++) res.data[i] *= val;
+        return res;
+    }
+
+    //матрица на вектор
+    TDynamicArray<T> operator*(const TDynamicArray<T>& v) const {
+        if (v.size() != cols) throw std::invalid_argument("matrix size != vector size");
+
+        TDynamicArray<T> res(rows);
+        for (size_t i = 0; i < rows; i++)
+            for (size_t j = row[i]; j < row[i + 1]; j++) //для каждой строки по элементам
+                res[i] += data[j] * v[col[j]];
+        return res;
+    }
+
+    //матрично матричные операции
 };
 
 #endif
