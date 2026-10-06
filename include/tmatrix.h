@@ -274,7 +274,7 @@ public:
     }
 };
 
-//хороший вектор:
+//нормальный вектор:
 template<typename T>
 class TDynamicArray {
 private:
@@ -429,9 +429,11 @@ public:
         }
         //если место не было занято:
         if (val == T()) return;
+        size_t pos = row[_row];
+        while (pos < row[_row + 1] && col[pos] < _col) pos++; //ищем правильное место, потому что col должен быть отсортирован для последующих алгоритмов
         for (size_t i = _row + 1; i <= rows; i++) row[i] += 1;
-        col.insert(row[_row], _col);
-        data.insert(row[_row], val);
+        col.insert(pos, _col);
+        data.insert(pos, val);
     }
 
     //матрица на скаляр
@@ -458,6 +460,109 @@ public:
     }
 
     //матрично матричные операции
+    TCRSMatrix<T> operator+(const TCRSMatrix<T>& m) const {
+        if (rows != m.rows || cols != m.cols) throw std::invalid_argument("matrix size != this matrix size");
+
+        TCRSMatrix<T> res(rows, cols);
+        for (size_t i = 0; i < rows; i++) {
+            size_t thisRow = row[i], endThisRow = row[i + 1], 
+                mRow = m.row[i], endMRow = m.row[i + 1];
+            while (thisRow < endThisRow && mRow < endMRow) {
+                if (col[thisRow] < m.col[mRow]) {
+                    res.col.push_back(col[thisRow]);
+                    res.data.push_back(data[thisRow]);
+                    thisRow += 1;
+                }
+                else if (col[thisRow] > m.col[mRow]) {
+                    res.col.push_back(m.col[mRow]);
+                    res.data.push_back(m.data[mRow]);
+                    mRow += 1;
+                }
+                else {
+                    T sum = data[thisRow] + m.data[mRow];
+                    if (sum != T()) { //0 не записываем
+                        res.col.push_back(col[thisRow]);
+                        res.data.push_back(sum);
+                    }
+                    thisRow += 1; mRow += 1;
+                }
+            }
+            //обрабатываем концы
+            while (thisRow < endThisRow) {
+                res.col.push_back(col[thisRow]);
+                res.data.push_back(data[thisRow]);
+                thisRow += 1;
+            }
+            while (mRow < endMRow) {
+                res.col.push_back(m.col[mRow]);
+                res.data.push_back(m.data[mRow]);
+                mRow += 1;
+            }
+            res.row[i + 1] = res.data.size(); //не забываем про row
+        }
+        return res;
+    }
+
+    TCRSMatrix<T> operator-(const TCRSMatrix<T>& m) const {
+        if (rows != m.rows || cols != m.cols) throw std::invalid_argument("matrix size != this matrix size");
+
+        TCRSMatrix<T> res(rows, cols);
+        for (size_t i = 0; i < rows; i++) {
+            size_t thisRow = row[i], endThisRow = row[i + 1],
+                mRow = m.row[i], endMRow = m.row[i + 1];
+            while (thisRow < endThisRow && mRow < endMRow) {
+                if (col[thisRow] < m.col[mRow]) {
+                    res.col.push_back(col[thisRow]);
+                    res.data.push_back(data[thisRow]);
+                    thisRow += 1;
+                }
+                else if (col[thisRow] > m.col[mRow]) {
+                    res.col.push_back(m.col[mRow]);
+                    res.data.push_back(-m.data[mRow]); //тут - !
+                    mRow += 1;
+                }
+                else {
+                    T diff = data[thisRow] - m.data[mRow];
+                    if (diff != T()) { //0 не записываем
+                        res.col.push_back(col[thisRow]);
+                        res.data.push_back(diff);
+                    }
+                    thisRow += 1; mRow += 1;
+                }
+            }
+            //обрабатываем концы
+            while (thisRow < endThisRow) {
+                res.col.push_back(col[thisRow]);
+                res.data.push_back(data[thisRow]);
+                thisRow += 1;
+            }
+            while (mRow < endMRow) {
+                res.col.push_back(m.col[mRow]);
+                res.data.push_back(-m.data[mRow]); //тут - !
+                mRow += 1;
+            }
+            res.row[i + 1] = res.data.size(); //не забываем про row
+        }
+        return res;
+    }
+
+    TCRSMatrix<T> operator*(const TCRSMatrix<T>& m) const {
+        if (m.rows != cols) throw std::invalid_argument("matrix sizes bad");
+
+        TCRSMatrix<T> res(rows, m.cols);
+        TDynamicArray<T> sums(m.cols); //работаем со строками поэтому параллельно считаем несколько сумм
+        for (size_t i = 0; i < rows; i++) { //по строкам нашей матрицы
+            for (size_t j = 0; j < m.cols; j++) sums[j] = T();
+            for (size_t thRow = row[i]; thRow < row[i + 1]; thRow++) { //по столбцам для i строки
+                size_t k = col[thRow]; //достаём номер столбца, то есть рассматриваем элемент i,k
+                for (size_t mRow = m.row[k]; mRow < m.row[k + 1]; mRow++) { //по столбцам k строки другой матрицв
+                    sums[m.col[mRow]] += data[thRow] * m.data[mRow]; //для столбца другой матрицы записываем в сумму новое слагаемое
+                }
+            }
+            for (size_t j = 0; j < m.cols; j++) if (sums[j] != T()) res.set(i, j, sums[j]); //записываем результат
+        }
+        return res;
+    }
 };
 
 #endif

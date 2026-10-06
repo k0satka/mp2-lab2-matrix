@@ -172,3 +172,131 @@ TEST(TCRSMatrix, throws_when_vector_size_is_wrong)
 
     EXPECT_THROW(m * v, std::invalid_argument);
 }
+
+TEST(TCRSMatrix, can_add_matrices)
+{
+    TCRSMatrix<int> m1(2, 3);
+    m1.set(0, 0, 2);
+    m1.set(0, 2, 3);
+    m1.set(1, 1, 4);
+    TCRSMatrix<int> m2(2, 3);
+    m2.set(0, 0, 5);
+    m2.set(0, 1, 6);
+    m2.set(1, 1, 1);
+    TCRSMatrix<int> m = m1 + m2;
+
+    EXPECT_EQ(7, m.get(0, 0));
+    EXPECT_EQ(6, m.get(0, 1));
+    EXPECT_EQ(3, m.get(0, 2));
+    EXPECT_EQ(5, m.get(1, 1));
+}
+
+TEST(TCRSMatrix, throws_when_adding_matrices_with_different_sizes)
+{
+    TCRSMatrix<int> m1(2, 3);
+    TCRSMatrix<int> m2(3, 2);
+
+    EXPECT_THROW(m1 + m2, std::invalid_argument);
+}
+
+TEST(TCRSMatrix, can_subtract_matrices)
+{
+    TCRSMatrix<int> m1(2, 3);
+    m1.set(0, 0, 7);
+    m1.set(0, 2, 5);
+    m1.set(1, 1, 4);
+    TCRSMatrix<int> m2(2, 3);
+    m2.set(0, 0, 2);
+    m2.set(0, 1, 3);
+    m2.set(1, 1, 1);
+    TCRSMatrix<int> m = m1 - m2;
+
+    EXPECT_EQ(5, m.get(0, 0));
+    EXPECT_EQ(-3, m.get(0, 1));
+    EXPECT_EQ(5, m.get(0, 2));
+    EXPECT_EQ(3, m.get(1, 1));
+}
+
+TEST(TCRSMatrix, throws_when_subtracting_matrices_with_different_sizes)
+{
+    TCRSMatrix<int> m1(2, 3);
+    TCRSMatrix<int> m2(3, 2);
+
+    EXPECT_THROW(m1 - m2, std::invalid_argument);
+}
+
+TEST(TCRSMatrix, can_multiply_matrices)
+{
+    TCRSMatrix<int> m1(2, 3);
+    m1.set(0, 0, 1);
+    m1.set(0, 2, 2);
+    m1.set(1, 1, 3);
+
+    TCRSMatrix<int> m2(3, 2);
+    m2.set(0, 0, 4);
+    m2.set(1, 1, 5);
+    m2.set(2, 0, 6);
+
+    TCRSMatrix<int> m = m1 * m2;
+
+    EXPECT_EQ(16, m.get(0, 0));
+    EXPECT_EQ(0, m.get(0, 1));
+    EXPECT_EQ(0, m.get(1, 0));
+    EXPECT_EQ(15, m.get(1, 1));
+}
+
+TEST(TCRSMatrix, throws_when_multiplying_matrices_with_wrong_sizes)
+{
+    TCRSMatrix<int> m1(2, 3);
+    TCRSMatrix<int> m2(2, 2);
+
+    EXPECT_THROW(m1 * m2, std::invalid_argument);
+}
+
+TEST(TCRSMatrix, can_multiply_by_zero_matrix)
+{
+    TCRSMatrix<int> m1(2, 3);
+    m1.set(0, 0, 2);
+    m1.set(0, 2, 3);
+    m1.set(1, 1, 4);
+    TCRSMatrix<int> m2(3, 2);
+    TCRSMatrix<int> m = m1 * m2;
+
+    EXPECT_EQ(0, m.get(0, 0));
+    EXPECT_EQ(0, m.get(0, 1));
+    EXPECT_EQ(0, m.get(1, 0));
+    EXPECT_EQ(0, m.get(1, 1));
+    EXPECT_EQ(0, m.get_DataSize());
+}
+
+TEST(TCRSMatrix, can_multiply_matrices_with_empty_rows)
+{
+    TCRSMatrix<int> m1(3, 3);
+    m1.set(0, 0, 2);
+    m1.set(2, 2, 3);
+    TCRSMatrix<int> m2(3, 2);
+    m2.set(0, 1, 4);
+    m2.set(2, 0, 5);
+    TCRSMatrix<int> m = m1 * m2;
+
+    EXPECT_EQ(8, m.get(0, 1));
+    EXPECT_EQ(0, m.get(0, 0));
+    EXPECT_EQ(0, m.get(1, 0));
+    EXPECT_EQ(0, m.get(1, 1));
+    EXPECT_EQ(15, m.get(2, 0));
+    EXPECT_EQ(0, m.get(2, 1));
+}
+
+TEST(TCRSMatrix, does_not_store_zero_after_matrix_multiplication)
+{
+    TCRSMatrix<int> m1(1, 2);
+    m1.set(0, 0, 2);
+    m1.set(0, 1, -2);
+    TCRSMatrix<int> m2(2, 1);
+    m2.set(0, 0, 3);
+    m2.set(1, 0, 3);
+    TCRSMatrix<int> m = m1 * m2;
+
+    EXPECT_EQ(0, m.get(0, 0));
+    EXPECT_EQ(0, m.get_DataSize());
+}
