@@ -28,7 +28,7 @@ public:
         if (size == 0 || size > MAX_VECTOR_SIZE) throw out_of_range("Vector size should be greater than zero");
 
         sz = size;
-        pMem = new T[sz]();// {}; // У типа T д.б. констуктор по умолчанию
+        pMem = new T[sz]();
     }
 
     TDynamicVector(T* arr, size_t s) {
@@ -256,6 +256,37 @@ public:
         return res;
     }
 
+    TDynamicMatrix bestMult(const TDynamicMatrix& m) {
+        if (m.sz != sz) throw std::invalid_argument("matrix size != this matrix size");
+
+        TDynamicMatrix res(sz);
+        for (size_t i = 0; i < sz; i++)
+            for (size_t k = 0; k < sz; ++k) {
+                T a = pMem[i][k];
+                for (size_t j = 0; j < sz; j++)
+                    res[i][j] += a * m.pMem[k][j];
+            }
+        return res;
+    }
+
+    TDynamicMatrix blockMult(const TDynamicMatrix& m, size_t blockSize = 2) const {
+        if (m.sz != sz || blockSize == 0) throw invalid_argument("matrix size != this matrix size or block size == 0");
+
+        TDynamicMatrix res(sz);
+        for (size_t ii = 0; ii < sz; ii += blockSize) //шагаем по блокам
+            for (size_t kk = 0; kk < sz; kk += blockSize)
+                for (size_t jj = 0; jj < sz; jj += blockSize) {
+                    size_t iEnd = std::min(ii + blockSize, sz), kEnd = std::min(kk + blockSize, sz), jEnd = std::min(jj + blockSize, sz); //идём пока не кончится блок или матрица
+                    for (size_t i = ii; i < iEnd; i++) //считаем блок как обычно
+                        for (size_t k = kk; k < kEnd; k++) {
+                            T a = pMem[i][k];
+                            for (size_t j = jj; j < jEnd; j++)
+                                res[i][j] += a * m.pMem[k][j];
+                        }
+                }
+        return res;
+    }
+
     // ввод/вывод
     friend istream& operator>>(istream& istr, TDynamicMatrix& v) {
         for (size_t i = 0; i < v.sz; i++)
@@ -273,6 +304,7 @@ public:
         return ostr;
     }
 };
+//ДОПОЛНЕНИЯ_________________________________________________________________________
 
 //нормальный вектор:
 template<typename T>
@@ -398,13 +430,30 @@ private:
     TDynamicArray<size_t> row;
 
 public:
-    TCRSMatrix(size_t _rows = 1, size_t _cols = 1) : rows(_rows), cols(_cols), row(rows + 1) { }
+    TCRSMatrix(size_t _rows = 1, size_t _cols = 1) : rows(_rows), cols(_cols), row(_rows + 1) { }
+
+    TCRSMatrix(const TDynamicMatrix<T>& m) : rows(m.size()), cols(m.size()), row(m.size() + 1) { //конструктор преобразования обычной матрицы из задания в разреженную
+        for (size_t i = 0; i < m.size(); i++) {
+            for (size_t j = 0; j < m.size(); j++)
+                if (m[i][j] != T()) {
+                    data.push_back(m[i][j]);
+                    col.push_back(j);
+                }
+            row[i + 1] = data.size();
+        }
+    }
 
     size_t get_rows() const { return rows; }
 
     size_t get_cols() const { return cols; }
 
     size_t get_DataSize() const { return data.size(); }
+
+    void clear() {
+        data.clear();
+        col.clear();
+        for (size_t i = 0; i <= rows; i++) row[i] = 0; //очищаем от ненеуевых элементов сохраняя размер, но row зависит от кол-ва строк, поэтому просто его зануляем
+    }
 
     T get(size_t _row, size_t _col) const {
         if (_row >= rows || _col >= cols) throw std::out_of_range("index out of range");
@@ -434,6 +483,18 @@ public:
         for (size_t i = _row + 1; i <= rows; i++) row[i] += 1;
         col.insert(pos, _col);
         data.insert(pos, val);
+    }
+
+    //сравнения
+    bool operator==(const TCRSMatrix<T>& m) const {
+        if (rows != m.rows || cols != m.cols || data.size() != m.data.size()) return false;
+        for (size_t i = 0; i <= rows; i++) if (row[i] != m.row[i]) return false; //сравню тут а не в векторе
+        for (size_t i = 0; i <= col.size(); i++) if (col[i] != m.col[i] || data[i] != m.data[i]) return false;
+        return true;
+    }
+
+    bool operator!=(const TCRSMatrix<T>& m) const {
+        return !(*this == m);
     }
 
     //матрица на скаляр
@@ -561,6 +622,34 @@ public:
             }
             for (size_t j = 0; j < m.cols; j++) if (sums[j] != T()) res.set(i, j, sums[j]); //записываем результат
         }
+        return res;
+    }
+
+    TCRSMatrix<T> transpose() const { //транспонированная
+        //TCRSMatrix<T> res(cols, rows);
+
+        //for (size_t i = 0; i < rows; i++)
+        //    for (size_t j = row[i]; j < row[i + 1]; j++)
+        //        res.set(col[j], i, data[j]); //просто перемещаем все элементы в транспонированную
+
+        //return res;
+        
+        //оптимизированный вариант:
+        TCRSMatrix<T> res(cols, rows);
+
+        TDynamicArray<size_t> rowsLen(cols); //считаем длинны строк (элементы) транспонированной матрицы (количество элементов в столбце нашей матрицы) чтобы построить row
+        for (size_t i = 0; i < data.size(); i++) rowsLen[col[i]] += 1;
+        for (size_t i = 0; i < res.rows; i++) res.row[i + 1] = res.row[i] + rowsLen[i]; //теперь записываем информацию о строках
+        //перемещаем элементы в правильные позиции
+        TDynamicArray<size_t> elInResRow = res.row; //чтобы запоминать куда положить следующий элемент в новой строке
+        res.data.resize(data.size()); //устанавливаем размеры заранее
+        res.col.resize(data.size());
+        for (size_t i = 0; i < rows; i++)
+            for (size_t j = row[i]; j < row[i + 1]; j++) {
+                res.col[elInResRow[col[j]]] = i; //столбец переходит в строку
+                res.data[elInResRow[col[j]]] = data[j]; //туда же кладём значение
+                elInResRow[col[j]] += 1; //прибавляем 1 для след. элемента этой строки
+            }
         return res;
     }
 };

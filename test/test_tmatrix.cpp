@@ -236,3 +236,82 @@ TEST(TDynamicMatrix, cant_subtract_matrixes_with_not_equal_size)
 	EXPECT_ANY_THROW(m1 - m2);
 }
 
+TEST(TDynamicMatrix, optimized_multiplication_gives_same_result)
+{
+	TDynamicMatrix<int> m1(3);
+	m1[0][0] = 1;
+	m1[0][1] = 2;
+	m1[0][2] = 3;
+	m1[1][0] = 4;
+	m1[1][1] = 5;
+	m1[1][2] = 6;
+	m1[2][0] = 7;
+	m1[2][1] = 8;
+	m1[2][2] = 9;
+	TDynamicMatrix<int> m2(3);
+	m2[0][0] = 9;
+	m2[0][1] = 8;
+	m2[0][2] = 7;
+	m2[1][0] = 6;
+	m2[1][1] = 5;
+	m2[1][2] = 4;
+	m2[2][0] = 3;
+	m2[2][1] = 2;
+	m2[2][2] = 1;
+	TDynamicMatrix<int> basic = m1 * m2;
+	TDynamicMatrix<int> optimized = m1.bestMult(m2);
+
+	EXPECT_EQ(basic, optimized);
+}
+
+TEST(TDynamicMatrix, blocked_multiplication_gives_same_result)
+{
+	TDynamicMatrix<int> m1(3);
+	m1[0][0] = 1;
+	m1[0][1] = 2;
+	m1[0][2] = 3;
+	m1[1][0] = 4;
+	m1[1][1] = 5;
+	m1[1][2] = 6;
+	m1[2][0] = 7;
+	m1[2][1] = 8;
+	m1[2][2] = 9;
+	TDynamicMatrix<int> m2(3);
+	m2[0][0] = 9;
+	m2[0][1] = 8;
+	m2[0][2] = 7;
+	m2[1][0] = 6;
+	m2[1][1] = 5;
+	m2[1][2] = 4;
+	m2[2][0] = 3;
+	m2[2][1] = 2;
+	m2[2][2] = 1;
+	TDynamicMatrix<int> basic = m1 * m2;
+	TDynamicMatrix<int> block = m1.blockMult(m2, 2);
+
+	EXPECT_EQ(basic, block);
+}
+
+TEST(TDynamicMatrix, blocked_multiplication_works_with_large_block)
+{
+	TDynamicMatrix<int> m1(3);
+	m1[0][0] = 1;
+	m1[1][1] = 2;
+	m1[2][2] = 3;
+	TDynamicMatrix<int> m2(3);
+	m2[0][0] = 4;
+	m2[1][1] = 5;
+	m2[2][2] = 6;
+	TDynamicMatrix<int> basic = m1 * m2;
+	TDynamicMatrix<int> block = m1.blockMult(m2, 10);
+
+	EXPECT_EQ(basic, block);
+}
+
+TEST(TDynamicMatrix, blocked_multiplication_rejects_zero_block)
+{
+	TDynamicMatrix<int> m1(3);
+	TDynamicMatrix<int> m2(3);
+
+	EXPECT_THROW(m1.blockMult(m2, 0), std::invalid_argument);
+}
