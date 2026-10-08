@@ -24,16 +24,16 @@ protected:
     T* pMem;
 
 public:
-    TDynamicVector(size_t size = 1) {
-        if (size == 0 || size > MAX_VECTOR_SIZE) throw out_of_range("Vector size should be greater than zero");
+    TDynamicVector(size_t s = 1) {
+        if (s == 0 || s > MAX_VECTOR_SIZE) throw out_of_range("Vector size should be greater than zero");
 
-        sz = size;
+        sz = s;
         pMem = new T[sz]();
     }
 
     TDynamicVector(T* arr, size_t s) {
         if (arr == nullptr) throw invalid_argument("Array == nullptr!");
-        if (size == 0 || s > MAX_VECTOR_SIZE) throw out_of_range("Vector size should be greater than zero");
+        if (s == 0 || s > MAX_VECTOR_SIZE) throw out_of_range("Vector size should be greater than zero");
 
         sz = s;
         pMem = new T[sz];
