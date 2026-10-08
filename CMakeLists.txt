@@ -11,6 +11,7 @@ enable_testing()  # defines BUILD_TESTING
 set(MP2_TESTS   "test_${PROJECT_NAME}")
 set(MP2_CUSTOM_PROJECT "${PROJECT_NAME}")
 set(MP2_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(MP2_BENCHMARK "benchmark_${PROJECT_NAME}")
 
 add_subdirectory(include)
 
@@ -23,6 +24,7 @@ if(BUILD_TESTING)
 	add_subdirectory(test)
 endif()
 
+add_subdirectory(benchmark)
 
 # REPORT
 message( STATUS "")
